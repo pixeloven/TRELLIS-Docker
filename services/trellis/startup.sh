@@ -7,7 +7,10 @@ source ~/.venv/bin/activate
 
 # export CXX=/usr/local/bin/gxx-wrapper
 
-echo "Launching app http://$GRADIO_SERVER_NAME:$GRADIO_SERVER_PORT"
-python3 app.py
+echo "Starting TRELLIS on $GRADIO_SERVER_NAME:$GRADIO_SERVER_PORT"
+# Set Gradio environment variables to ensure proper binding
+export GRADIO_SERVER_NAME=$GRADIO_SERVER_NAME
+export GRADIO_SERVER_PORT=$GRADIO_SERVER_PORT
+python3 launch_app.py
 
-echo "Something went wrong and it exited?"
+echo "Application exited unexpectedly."

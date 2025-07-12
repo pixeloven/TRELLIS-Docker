@@ -1,3 +1,4 @@
+# Main build for Docker Bake - Trellis Docker
 FROM runtime AS base
 
 # Create a g++ wrapper for JIT, since the include dirs are passed with -i rather than -I for some reason
@@ -21,8 +22,7 @@ SHELL ["/bin/bash", "--login", "-c"]
 ENV VIRTUAL_ENV=/home/trellis/.venv
 ENV XDG_CACHE_HOME=/home/trellis/.cache
 
-# @todo can we just use the onnxruntime-gpu package?
-RUN --mount=type=cache,target=~/.cache/pip \ 
+RUN --mount=type=cache,target=~/.cache/pip \
   python -m venv $VIRTUAL_ENV && \
   source ~/.venv/bin/activate
 
@@ -31,32 +31,37 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 WORKDIR /home/trellis/app
 
-# Setup conda
+# Clone TRELLIS repo
 RUN git clone --recurse-submodules --remote-submodules https://github.com/microsoft/TRELLIS.git .
 
 COPY --chown=trellis:trellis . .
 
-# Run setup.sh - this won't install all the things due to missing GPU in the builder
+# Install basic requirements first (without flash-attn)
 RUN --mount=type=cache,target=~/.cache/pip \
-    source ~/.venv/bin/activate && \ 
-    pip install -r requirements.txt
+    source ~/.venv/bin/activate && \
+    pip install numpy==1.24.3 && \
+    pip install torch==2.4.0 torchaudio==2.4.0 torchvision==0.19.0 && \
+    pip install onnx onnxscript packaging setuptools wheel && \
+    pip install plyfile utils3d spconv xformers gradio
 
+# Install GPU-dependent packages
 RUN --mount=type=cache,target=~/.cache/pip \
-    source ~/.venv/bin/activate && \ 
+    source ~/.venv/bin/activate && \
     pip install diso && \
     pip install kaolin==0.17.0 -f https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.4.0_cu124.html && \
+    pip install flash-attn --no-build-isolation && \
     pip install git+https://github.com/NVlabs/nvdiffrast.git
 
 RUN --mount=type=cache,target=~/.cache/pip \
-    source ~/.venv/bin/activate && \ 
+    source ~/.venv/bin/activate && \
     ./setup.sh --basic --xformers --flash-attn --diffoctreerast --vox2seq --spconv --mipgaussian --kaolin --nvdiffrast --demo && \
     chmod +x startup.sh && \
     chmod +x post_install.sh && \
-    pip cache purge 
+    chmod +x entrypoint.sh && \
+    chmod +x launch_app.py && \
+    pip cache purge
 
-
-# Deduplicate with rdfind
-# This reduces the size of the image by a few hundred megs.
+# Deduplicate with rdfind (optional)
 # RUN rdfind -makesymlinks true /opt/conda
 
 ENV GRADIO_SERVER_NAME="0.0.0.0"
@@ -64,9 +69,6 @@ ENV GRADIO_SERVER_PORT="7860"
 
 ENTRYPOINT ["./entrypoint.sh"]
 
-# If you're pushing to a container registry, let this run once, run some
-# tests, then do `docker commit` to save the models along with the image.
-# This will ensure that it won't fail at runtime due to models being
-# unavailable, or network restrictions.
+# Use launch_app.py to ensure Gradio binds to 0.0.0.0
 CMD ["bash", "startup.sh"]
 
