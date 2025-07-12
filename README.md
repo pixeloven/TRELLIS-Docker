@@ -1,2 +1,2 @@
-# Trellis-Docker
-Simple startup and management of Trellis in Docker
+# TRELLIS-Docker
+Simple startup and management of TRELLIS in Docker
