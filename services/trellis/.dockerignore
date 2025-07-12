@@ -1,0 +1,31 @@
+# Git
+.git
+.gitignore
+.gitmodules
+
+# Documentation
+README.md
+*.md
+
+# Environment files
+.env
+.env.*
+env.example
+
+# Docker files
+Dockerfile
+docker-compose.yml
+docker-swarm.yml
+.dockerignore
+
+# Models and data (will be mounted as volumes)
+models/
+outputs/
+uploads/
+configs/
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db 

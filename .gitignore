@@ -1,0 +1,13 @@
+# Docker
+.env
+
+# VSCode specific
+*.code-workspace
+/.vscode
+
+# Service data
+/data/*
+!/data/.gitignore
+
+# Python
+/.venv
