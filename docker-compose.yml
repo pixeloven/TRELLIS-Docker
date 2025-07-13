@@ -15,6 +15,8 @@ services:
       - ./data/trellis/outputs:/app/outputs
       - ./data/trellis/uploads:/app/uploads
       - ./data/trellis/configs:/app/configs
+      - ./data/trellis/tmp:/app/tmp
+      - ./data/trellis/cache:/home/trellis/.cache
     stop_signal: SIGKILL
     tty: true
     networks:

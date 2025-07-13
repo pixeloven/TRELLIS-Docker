@@ -2,6 +2,7 @@
 # FROM pytorch/pytorch:2.4.0-cuda12.4-cudnn9-devel AS runtime-nvidia
 # @todo can we use the devel image to build and then switch to runtime for the final image?
 # FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04 AS runtime-nvidia
+# FROM nvidia/cuda:12.2.2-cudnn8-devel-ubuntu22.04 AS runtime
 FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04 AS runtime
 
 ENV NVIDIA_VISIBLE_DEVICES=all
@@ -11,11 +12,11 @@ ENV PIP_PREFER_BINARY=1
 # Install build dependencies
 RUN apt-get update && \
 apt-get install -y --no-install-recommends \ 
-  build-essential \
+  ninja-build \
   python3 \
   python3-dev \
-  python3-pip \
   python3-venv \
+  # python3-pip \
   python-is-python3 \
   git \
   wget \
@@ -27,7 +28,10 @@ apt-get install -y --no-install-recommends \
   rdfind \
   strace && \
   apt-get clean && \
-  rm -rf /var/lib/apt/lists/* && \
-  python -m pip install -U pip && \
-  pip cache purge
+  rm -rf /var/lib/apt/lists/*
 
+# Install latest pip
+RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \
+  && python3 get-pip.py \
+  && rm get-pip.py && \
+  pip cache purge
