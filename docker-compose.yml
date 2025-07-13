@@ -15,7 +15,6 @@ services:
       - ./data/trellis/outputs:/app/outputs
       - ./data/trellis/uploads:/app/uploads
       - ./data/trellis/configs:/app/configs
-      - ./services/trellis/post_install.sh:/home/trellis/app/post_install.sh
     stop_signal: SIGKILL
     tty: true
     networks:

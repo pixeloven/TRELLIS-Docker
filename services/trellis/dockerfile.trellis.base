@@ -36,39 +36,78 @@ RUN git clone --recurse-submodules --remote-submodules https://github.com/micros
 
 COPY --chown=trellis:trellis . .
 
-# Install basic requirements first (without flash-attn)
+# Install PyTorch ecosystem first (compatible versions)
 RUN --mount=type=cache,target=~/.cache/pip \
     source ~/.venv/bin/activate && \
-    pip install numpy==1.24.3 && \
-    pip install torch==2.4.0 torchaudio==2.4.0 torchvision==0.19.0 && \
-    pip install onnx onnxscript packaging setuptools wheel && \
-    pip install plyfile utils3d spconv xformers gradio
+    pip install torch==2.4.0 torchvision==0.19.0 torchaudio==2.4.0 --index-url https://download.pytorch.org/whl/cu124
+
+# Install basic dependencies (following TRELLIS setup.sh --basic)
+RUN --mount=type=cache,target=~/.cache/pip \
+    source ~/.venv/bin/activate && \
+    pip install pillow imageio imageio-ffmpeg tqdm easydict opencv-python-headless scipy ninja rembg onnxruntime trimesh open3d xatlas pyvista pymeshfix igraph transformers && \
+    pip install git+https://github.com/EasternJournalist/utils3d.git@9a4eb15e4021b67b12c460c7057d642626897ec8
+
+# Install additional basic packages
+RUN --mount=type=cache,target=~/.cache/pip \
+    source ~/.venv/bin/activate && \
+    pip install onnx onnxscript packaging setuptools wheel plyfile
+
+# Install xformers (compatible version for PyTorch 2.4.0 + CUDA 12.4)
+RUN --mount=type=cache,target=~/.cache/pip \
+    source ~/.venv/bin/activate && \
+    pip install xformers==0.0.28.post2 --index-url https://download.pytorch.org/whl/cu124
+
+# Install flash-attn
+RUN --mount=type=cache,target=~/.cache/pip \
+    source ~/.venv/bin/activate && \
+    pip install flash-attn --no-build-isolation
+
+# Install Kaolin (compatible version for PyTorch 2.4.0)
+RUN --mount=type=cache,target=~/.cache/pip \
+    source ~/.venv/bin/activate && \
+    pip install kaolin==0.17.0 -f https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.4.0_cu124.html
 
 # Install GPU-dependent packages
 RUN --mount=type=cache,target=~/.cache/pip \
     source ~/.venv/bin/activate && \
     pip install diso && \
-    pip install kaolin==0.17.0 -f https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.4.0_cu124.html && \
-    pip install flash-attn --no-build-isolation && \
     pip install git+https://github.com/NVlabs/nvdiffrast.git
 
+# Install spconv (GPU-dependent)
 RUN --mount=type=cache,target=~/.cache/pip \
     source ~/.venv/bin/activate && \
-    ./setup.sh --basic --xformers --flash-attn --diffoctreerast --vox2seq --spconv --mipgaussian --kaolin --nvdiffrast --demo && \
-    chmod +x startup.sh && \
-    chmod +x post_install.sh && \
-    chmod +x entrypoint.sh && \
-    chmod +x launch_app.py && \
-    pip cache purge
+    pip install spconv
 
-# Deduplicate with rdfind (optional)
-# RUN rdfind -makesymlinks true /opt/conda
+# Install Gradio for the web interface
+RUN --mount=type=cache,target=~/.cache/pip \
+    source ~/.venv/bin/activate && \
+    pip install gradio
+
+# Create a simple replacement for the missing gradio_litmodel3d component
+RUN --mount=type=cache,target=~/.cache/pip \
+    source ~/.venv/bin/activate && \
+    mkdir -p /home/trellis/.venv/lib/python3.10/site-packages/gradio_litmodel3d && \
+    printf 'import gradio as gr\n\nclass LitModel3D(gr.File):\n    def __init__(self, label="3D Model", exposure=1.0, height=300, **kwargs):\n        super().__init__(label=label, height=height, **kwargs)\n        self.exposure = exposure\n' > /home/trellis/.venv/lib/python3.10/site-packages/gradio_litmodel3d/__init__.py
+
+# Run TRELLIS setup for extensions (mipgaussian, diffoctreerast, etc.)
+RUN --mount=type=cache,target=~/.cache/pip \
+    source ~/.venv/bin/activate && \
+    ./setup.sh --mipgaussian --diffoctreerast
+
+# Make scripts executable
+RUN chmod +x startup.sh && \
+    chmod +x entrypoint.sh
+
+# Clean up pip cache
+RUN --mount=type=cache,target=~/.cache/pip \
+    source ~/.venv/bin/activate && \
+    pip cache purge
 
 ENV GRADIO_SERVER_NAME="0.0.0.0"
 ENV GRADIO_SERVER_PORT="7860"
 
 ENTRYPOINT ["./entrypoint.sh"]
 
-# Use launch_app.py to ensure Gradio binds to 0.0.0.0
+# Launch TRELLIS directly
 CMD ["bash", "startup.sh"]
 
