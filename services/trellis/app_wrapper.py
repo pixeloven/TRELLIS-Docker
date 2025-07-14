@@ -1,97 +1,82 @@
 #!/usr/bin/env python3
 """
-Wrapper script for TRELLIS app that fixes the localhost binding issue.
-This script monkey patches the demo.launch function to use GRADIO_SERVER_NAME environment variable.
+Simple wrapper for TRELLIS app that fixes both localhost binding and Gradio JSON schema issues.
 """
 
 import os
 import sys
-import types
+import traceback
 
-# This is a hack to fix the localhost binding issue.
-# It should be removed when the issue is fixed in the original app.
-# @todo Patch the app.py to use ENV
-def patch_gradio_launch():
-    """Monkey patch the demo.launch function to use environment variable"""
+def patch_gradio_issues():
+    """Patch both the localhost binding and JSON schema issues"""
     
-    # Store the original launch function
-    original_launch = None
-    
-    def patched_launch(self, *args, **kwargs):
-        """Patched launch function that uses GRADIO_SERVER_NAME environment variable"""
-        # Get server name from environment, default to 0.0.0.0
-        server_name = os.environ.get("GRADIO_SERVER_NAME", "0.0.0.0")
-        
-        # Set the server_name in kwargs if not already present
-        if 'server_name' not in kwargs:
-            kwargs['server_name'] = server_name
-        
-        print(f"Launching Gradio with server_name: {kwargs['server_name']}")
-        
-        # Call the original launch function
-        if original_launch is not None:
-            return original_launch(self, *args, **kwargs)
-        else:
-            print("Warning: Original launch function not found, using default")
-            return self.launch(*args, **kwargs)
-    
-    # Import gradio and patch the Interface.launch method
+    # Patch 1: Fix JSON schema bug
     try:
-        import gradio as gr
+        import gradio_client.utils as client_utils
         
-        # Store the original launch method
-        original_launch = gr.Interface.launch
+        # Store original function
+        original_get_type = client_utils._json_schema_to_python_type
         
-        # Replace the launch method with our patched version
-        gr.Interface.launch = patched_launch
+        def patched_get_type(schema, defs=None):
+            """Handle boolean values in schema that cause the TypeError"""
+            try:
+                if isinstance(schema, bool):
+                    return "bool"
+                if isinstance(schema, dict) and "const" in schema:
+                    const_value = schema["const"]
+                    if isinstance(const_value, bool):
+                        return "bool"
+                return original_get_type(schema, defs)
+            except TypeError as e:
+                if "argument of type 'bool' is not iterable" in str(e):
+                    if isinstance(schema, dict) and "additionalProperties" in schema:
+                        additional_props = schema["additionalProperties"]
+                        if isinstance(additional_props, bool):
+                            return "dict"
+                    return "any"
+                raise
         
-        print("Successfully patched gradio.Interface.launch")
+        client_utils._json_schema_to_python_type = patched_get_type
+        print("✅ Patched Gradio JSON schema bug")
         
-    except ImportError as e:
-        print(f"Warning: Could not import gradio: {e}")
     except Exception as e:
-        print(f"Warning: Could not patch gradio launch: {e}")
+        print(f"⚠️  Could not patch Gradio schema bug: {e}")
+    
+    # Patch 2: Fix localhost binding by setting environment variables
+    os.environ.setdefault('GRADIO_SERVER_NAME', '0.0.0.0')
+    os.environ.setdefault('GRADIO_SERVER_PORT', '7860')
+    print(f"✅ Set server binding to {os.environ['GRADIO_SERVER_NAME']}:{os.environ['GRADIO_SERVER_PORT']}")
 
 def main():
-    """Main function that patches gradio and runs the original app"""
+    """Main function that patches issues and launches TRELLIS"""
     
-    # Set default environment variables if not already set
-    if "GRADIO_SERVER_NAME" not in os.environ:
-        os.environ["GRADIO_SERVER_NAME"] = "0.0.0.0"
+    print("🚀 Starting TRELLIS with fixes applied...")
     
-    if "GRADIO_SERVER_PORT" not in os.environ:
-        os.environ["GRADIO_SERVER_PORT"] = "7860"
+    # Apply patches
+    patch_gradio_issues()
     
-    print(f"Starting TRELLIS with GRADIO_SERVER_NAME={os.environ['GRADIO_SERVER_NAME']}")
-    print(f"Starting TRELLIS with GRADIO_SERVER_PORT={os.environ['GRADIO_SERVER_PORT']}")
+    # Add current directory to Python path
+    sys.path.insert(0, os.getcwd())
     
-    # Patch the gradio launch function
-    patch_gradio_launch()
-    
-    # Import and run the original app
     try:
-        # Import the original app module
+        # Import and launch TRELLIS
         import app
+        print("✅ TRELLIS app imported successfully")
         
-        print("TRELLIS app imported successfully")
-        
-        # Launch the app - the demo object should be available after importing app
         if hasattr(app, 'demo'):
-            print("Launching TRELLIS Gradio interface...")
+            print("🎯 Launching TRELLIS Gradio interface...")
             app.demo.launch(
-                server_name=os.environ.get("GRADIO_SERVER_NAME", "0.0.0.0"),
-                server_port=int(os.environ.get("GRADIO_SERVER_PORT", "7860")),
+                server_name=os.environ['GRADIO_SERVER_NAME'],
+                server_port=int(os.environ['GRADIO_SERVER_PORT']),
                 share=False
             )
         else:
-            print("Warning: No 'demo' object found in app module")
-            print("Available attributes in app module:", dir(app))
+            print("❌ No 'demo' object found in app module")
+            sys.exit(1)
             
-    except ImportError as e:
-        print(f"Error importing TRELLIS app: {e}")
-        sys.exit(1)
     except Exception as e:
-        print(f"Error running TRELLIS app: {e}")
+        print(f"❌ Error launching TRELLIS: {e}")
+        traceback.print_exc()
         sys.exit(1)
 
 if __name__ == "__main__":
