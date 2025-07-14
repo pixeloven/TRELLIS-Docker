@@ -2,22 +2,23 @@
 set -e
 
 # Check if post-install steps have already been run
-echo "Running post-install setup..."
+echo "Doing post install steps"
 if [ -f .post_install_done ]; then
-    echo "Post-install already completed, skipping."
+    echo "Post-install steps already completed."
     exit 0
 fi
 
-echo "Installing GPU-dependent packages..."
-# Run the demo setup
-./setup.sh --mipgaussian --diffoctreerast
-
-echo "Verifying installation..."
-
-# export CXX=/usr/local/bin/gxx-wrapper
-python example.py
+# Install TRELLIS extensions (mipgaussian, diffoctreerast)
+source ~/.venv/bin/activate && \
+mkdir -p /tmp/extensions && \
+git clone --recurse-submodules https://github.com/JeffreyXiang/diffoctreerast.git /tmp/extensions/diffoctreerast && \
+pip install /tmp/extensions/diffoctreerast && \
+rm -rf /tmp/extensions/diffoctreerast && \
+git clone https://github.com/autonomousvision/mip-splatting.git /tmp/extensions/mip-splatting && \
+pip install /tmp/extensions/mip-splatting/submodules/diff-gaussian-rasterization/ && \
+rm -rf /tmp/extensions/mip-splatting
 
 # Mark completion
 touch .post_install_done
 
-echo "Post-install completed successfully."
+echo "Post-install steps completed successfully."

@@ -2,12 +2,16 @@
 
 source ~/.venv/bin/activate
 
-# Run post install steps if they haven't been run yet
 ./post_install.sh
 
-# export CXX=/usr/local/bin/gxx-wrapper
+echo "Attempting to start TRELLIS on $GRADIO_SERVER_NAME:$GRADIO_SERVER_PORT"
 
-echo "Launching app http://$GRADIO_SERVER_NAME:$GRADIO_SERVER_PORT"
-python3 app.py
+# Set environment variables for Gradio
+export GRADIO_SERVER_NAME=${GRADIO_SERVER_NAME:-"0.0.0.0"}
+export GRADIO_SERVER_PORT=${GRADIO_SERVER_PORT:-"7860"}
 
-echo "Something went wrong and it exited?"
+# Ensure we're in the correct directory
+cd /home/trellis/app
+
+# Launch TRELLIS using the simple wrapper
+python3 app_wrapper.py

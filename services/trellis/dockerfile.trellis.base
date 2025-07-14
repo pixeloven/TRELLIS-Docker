@@ -1,3 +1,4 @@
+# Main build for Docker Bake - Trellis Docker
 FROM runtime AS base
 
 # Create a g++ wrapper for JIT, since the include dirs are passed with -i rather than -I for some reason
@@ -21,8 +22,7 @@ SHELL ["/bin/bash", "--login", "-c"]
 ENV VIRTUAL_ENV=/home/trellis/.venv
 ENV XDG_CACHE_HOME=/home/trellis/.cache
 
-# @todo can we just use the onnxruntime-gpu package?
-RUN --mount=type=cache,target=~/.cache/pip \ 
+RUN --mount=type=cache,target=~/.cache/pip \
   python -m venv $VIRTUAL_ENV && \
   source ~/.venv/bin/activate
 
@@ -31,42 +31,86 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 WORKDIR /home/trellis/app
 
-# Setup conda
+# Clone TRELLIS repo
 RUN git clone --recurse-submodules --remote-submodules https://github.com/microsoft/TRELLIS.git .
+
+# Install PyTorch ecosystem first (compatible versions)
+RUN --mount=type=cache,target=~/.cache/pip \
+    source ~/.venv/bin/activate && \
+    pip install torch==2.5.0 torchvision==0.20.0 torchaudio==2.5.0 --index-url https://download.pytorch.org/whl/cu124
+
+# Install basic dependencies (following TRELLIS setup.sh --basic)
+RUN --mount=type=cache,target=~/.cache/pip \
+    source ~/.venv/bin/activate && \
+    pip install pillow imageio imageio-ffmpeg tqdm easydict opencv-python-headless scipy ninja rembg onnxruntime trimesh open3d xatlas pyvista pymeshfix igraph transformers && \
+    pip install git+https://github.com/EasternJournalist/utils3d.git@9a4eb15e4021b67b12c460c7057d642626897ec8
+
+# Install additional basic packages
+RUN --mount=type=cache,target=~/.cache/pip \
+    source ~/.venv/bin/activate && \
+    pip install onnx onnxscript packaging setuptools wheel plyfile
+
+# Install xformers (compatible version for PyTorch 2.4.0 + CUDA 12.4)
+RUN --mount=type=cache,target=~/.cache/pip \
+    source ~/.venv/bin/activate && \
+    pip install xformers==0.0.28.post2 --index-url https://download.pytorch.org/whl/cu124
+
+# Install flash-attn
+RUN --mount=type=cache,target=~/.cache/pip \
+    source ~/.venv/bin/activate && \
+    pip install flash-attn --no-build-isolation
+
+# Install Kaolin (compatible version for PyTorch 2.4.0)
+RUN --mount=type=cache,target=~/.cache/pip \
+    source ~/.venv/bin/activate && \
+    pip install kaolin==0.17.0 -f https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.5.0_cu124.html
+
+# Install GPU-dependent packages (might need to install in post install)
+RUN --mount=type=cache,target=~/.cache/pip \
+    source ~/.venv/bin/activate && \
+    pip install git+https://github.com/NVlabs/nvdiffrast.git
+
+# Install GPU-dependent packages mipgaussian, diffoctreerast (might need to install in post install)
+# RUN --mount=type=cache,target=~/.cache/pip \
+#     source ~/.venv/bin/activate && \
+#     mkdir -p /tmp/extensions && \
+#     git clone --recurse-submodules https://github.com/JeffreyXiang/diffoctreerast.git /tmp/extensions/diffoctreerast && \
+#     pip install /tmp/extensions/diffoctreerast && \
+#     git clone https://github.com/autonomousvision/mip-splatting.git /tmp/extensions/mip-splatting && \
+#     pip install /tmp/extensions/mip-splatting/submodules/diff-gaussian-rasterization/
+
+# Install GPU-dependent spconv (might need to install in post install)
+RUN --mount=type=cache,target=~/.cache/pip \
+    source ~/.venv/bin/activate && \
+    pip install spconv-cu124
+
+# Install Gradio for the web interface (pinned to compatible version)
+RUN --mount=type=cache,target=~/.cache/pip \
+    source ~/.venv/bin/activate && \
+    pip install gradio==4.44.1 gradio_litmodel3d==0.0.1
 
 COPY --chown=trellis:trellis . .
 
-# Run setup.sh - this won't install all the things due to missing GPU in the builder
+# Clean up pip cache
 RUN --mount=type=cache,target=~/.cache/pip \
-    source ~/.venv/bin/activate && \ 
-    pip install -r requirements.txt
-
-RUN --mount=type=cache,target=~/.cache/pip \
-    source ~/.venv/bin/activate && \ 
-    pip install diso && \
-    pip install kaolin==0.17.0 -f https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.4.0_cu124.html && \
-    pip install git+https://github.com/NVlabs/nvdiffrast.git
-
-RUN --mount=type=cache,target=~/.cache/pip \
-    source ~/.venv/bin/activate && \ 
-    ./setup.sh --basic --xformers --flash-attn --diffoctreerast --vox2seq --spconv --mipgaussian --kaolin --nvdiffrast --demo && \
+    source ~/.venv/bin/activate && \
+    pip cache purge && \
+    rm -rf /tmp/* && \
     chmod +x startup.sh && \
     chmod +x post_install.sh && \
-    pip cache purge 
+    chmod +x entrypoint.sh
 
+ARG GRADIO_SERVER_PORT="7860"
+EXPOSE $GRADIO_SERVER_PORT
 
-# Deduplicate with rdfind
-# This reduces the size of the image by a few hundred megs.
-# RUN rdfind -makesymlinks true /opt/conda
+ARG GRADIO_SERVER_NAME="0.0.0.0"
+ENV GRADIO_SERVER_NAME=$GRADIO_SERVER_NAME
 
-ENV GRADIO_SERVER_NAME="0.0.0.0"
-ENV GRADIO_SERVER_PORT="7860"
+ARG GRADIO_SHARE="False"
+ENV GRADIO_SHARE=$GRADIO_SHARE
 
 ENTRYPOINT ["./entrypoint.sh"]
 
-# If you're pushing to a container registry, let this run once, run some
-# tests, then do `docker commit` to save the models along with the image.
-# This will ensure that it won't fail at runtime due to models being
-# unavailable, or network restrictions.
+# Launch TRELLIS directly
 CMD ["bash", "startup.sh"]
 
