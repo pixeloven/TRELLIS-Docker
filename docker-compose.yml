@@ -9,8 +9,7 @@ services:
       - ATTENTION_BACKEND=${ATTENTION_BACKEND:-flash-attn}
       - GRADIO_SERVER_NAME=${GRADIO_SERVER_NAME:-"0.0.0.0"}
       - GRADIO_SERVER_PORT=${GRADIO_SERVER_PORT:-"7860"}
-      - GRADIO_SHARE=${GRADIO_SHARE:-"True"}
-      - GRADIO_ALLOWED_PATHS=${GRADIO_ALLOWED_PATHS:-"*"}
+      - GRADIO_SHARE=${GRADIO_SHARE:-"False"}
     ports:
       - "${GRADIO_SERVER_PORT:-7860}:${GRADIO_SERVER_PORT:-7860}"
     volumes:
@@ -22,8 +21,9 @@ services:
       - ./data/trellis/cache:/home/trellis/.cache
     stop_signal: SIGKILL
     tty: true
-    # networks:
-    #   - trellis_network
+    # network_mode: host
+    networks:
+      - trellis_network
     deploy:
       resources:
         reservations:
@@ -32,7 +32,7 @@ services:
               device_ids: ['0']
               capabilities: [compute, utility]
 
-# networks:
-#   trellis_network:
-#     name: trellis_network
-#     driver: bridge 
+networks:
+  trellis_network:
+    name: trellis_network
+    driver: bridge 

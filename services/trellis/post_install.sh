@@ -13,8 +13,10 @@ source ~/.venv/bin/activate && \
 mkdir -p /tmp/extensions && \
 git clone --recurse-submodules https://github.com/JeffreyXiang/diffoctreerast.git /tmp/extensions/diffoctreerast && \
 pip install /tmp/extensions/diffoctreerast && \
+rm -rf /tmp/extensions/diffoctreerast && \
 git clone https://github.com/autonomousvision/mip-splatting.git /tmp/extensions/mip-splatting && \
-pip install /tmp/extensions/mip-splatting/submodules/diff-gaussian-rasterization/
+pip install /tmp/extensions/mip-splatting/submodules/diff-gaussian-rasterization/ && \
+rm -rf /tmp/extensions/mip-splatting
 
 # Mark completion
 touch .post_install_done
