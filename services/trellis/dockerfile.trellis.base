@@ -31,8 +31,8 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 WORKDIR /home/trellis/app
 
-# Clone TRELLIS repo
-RUN git clone --recurse-submodules --remote-submodules https://github.com/microsoft/TRELLIS.git .
+# Copy TRELLIS source from submodule
+COPY --chown=trellis:trellis source/ .
 
 # Install PyTorch ecosystem first (compatible versions)
 RUN --mount=type=cache,target=~/.cache/pip \
