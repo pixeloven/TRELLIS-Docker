@@ -28,6 +28,24 @@ git add services/trellis/source
 git commit -m "Update TRELLIS submodule to <branch-name>"
 ```
 
+**Important**: The TRELLIS repository contains its own submodules (like FlexiCubes). The `--recursive` flag ensures all nested submodules are properly initialized.
+
+### Managing Nested Submodules
+The TRELLIS repository includes the FlexiCubes submodule for mesh representation:
+
+```bash
+# Update all nested submodules
+git submodule update --init --recursive
+
+# Update only the main TRELLIS submodule
+git submodule update --remote services/trellis/source
+
+# Update nested submodules within TRELLIS
+cd services/trellis/source
+git submodule update --remote
+
+```
+
 ### Build and Run
 
 ```bash
