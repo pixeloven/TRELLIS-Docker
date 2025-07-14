@@ -1,0 +1,3 @@
+[submodule "services/trellis/source"]
+	path = services/trellis/source
+	url = git@github.com:pixeloven/TRELLIS.git
