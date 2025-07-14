@@ -60,8 +60,22 @@ def main():
         import app
         print("✅ TRELLIS app imported successfully")
         
-        # The app will handle environment variables and launch automatically
-        print("🎯 TRELLIS will launch with environment variables...")
+        # Initialize the pipeline and launch the app
+        print("🎯 Initializing TRELLIS pipeline...")
+        from trellis.pipelines import TrellisImageTo3DPipeline
+        
+        pipeline = TrellisImageTo3DPipeline.from_pretrained("microsoft/TRELLIS-image-large")
+        pipeline.cuda()
+        
+        # Set the pipeline as a global variable in the app module
+        app.pipeline = pipeline
+        
+        print("🎯 Launching TRELLIS Gradio interface...")
+        app.demo.launch(
+            server_name=os.environ.get('GRADIO_SERVER_NAME', '0.0.0.0'),
+            server_port=int(os.environ.get('GRADIO_SERVER_PORT', '7860')),
+            share=os.environ.get('GRADIO_SHARE', 'false').lower() == 'true'
+        )
         
     except Exception as e:
         print(f"❌ Error launching TRELLIS: {e}")
