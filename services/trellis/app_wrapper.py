@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Simple wrapper for TRELLIS app that fixes both localhost binding and Gradio JSON schema issues.
+Simple wrapper for TRELLIS app that fixes Gradio JSON schema issues.
 """
 
 import os
@@ -8,9 +8,8 @@ import sys
 import traceback
 
 def patch_gradio_issues():
-    """Patch both the localhost binding and JSON schema issues"""
+    """Patch the Gradio JSON schema bug"""
     
-    # Patch 1: Fix JSON schema bug
     try:
         import gradio_client.utils as client_utils
         
@@ -41,11 +40,6 @@ def patch_gradio_issues():
         
     except Exception as e:
         print(f"⚠️  Could not patch Gradio schema bug: {e}")
-    
-    # Patch 2: Fix localhost binding by setting environment variables
-    os.environ.setdefault('GRADIO_SERVER_NAME', '0.0.0.0')
-    os.environ.setdefault('GRADIO_SERVER_PORT', '7860')
-    print(f"✅ Set server binding to {os.environ['GRADIO_SERVER_NAME']}:{os.environ['GRADIO_SERVER_PORT']}")
 
 def main():
     """Main function that patches issues and launches TRELLIS"""
@@ -64,10 +58,10 @@ def main():
         print("✅ TRELLIS app imported successfully")
         
         if hasattr(app, 'demo'):
-            print("🎯 Launching TRELLIS Gradio interface...")
+            print(f"🎯 Launching TRELLIS Gradio interface on {os.environ.get('GRADIO_SERVER_NAME', '0.0.0.0')}:{os.environ.get('GRADIO_SERVER_PORT', '7860')}...")
             app.demo.launch(
-                server_name=os.environ['GRADIO_SERVER_NAME'],
-                server_port=int(os.environ['GRADIO_SERVER_PORT']),
+                server_name=os.environ.get('GRADIO_SERVER_NAME', '0.0.0.0'),
+                server_port=int(os.environ.get('GRADIO_SERVER_PORT', '7860')),
                 share=False
             )
         else:
