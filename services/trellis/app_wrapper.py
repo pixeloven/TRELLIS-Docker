@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Simple wrapper for TRELLIS app that fixes both localhost binding and Gradio JSON schema issues.
+Simple wrapper for TRELLIS app that fixes Gradio JSON schema issues.
 """
 
 import os
@@ -8,9 +8,9 @@ import sys
 import traceback
 
 def patch_gradio_issues():
-    """Patch both the localhost binding and JSON schema issues"""
+    """Patch the Gradio JSON schema bug"""
     
-    # Patch 1: Fix JSON schema bug
+    # Patch: Fix JSON schema bug
     try:
         import gradio_client.utils as client_utils
         
@@ -41,39 +41,42 @@ def patch_gradio_issues():
         
     except Exception as e:
         print(f"⚠️  Could not patch Gradio schema bug: {e}")
-    
-    # Patch 2: Fix localhost binding by setting environment variables
-    os.environ.setdefault('GRADIO_SERVER_NAME', '0.0.0.0')
-    os.environ.setdefault('GRADIO_SERVER_PORT', '7860')
-    print(f"✅ Set server binding to {os.environ['GRADIO_SERVER_NAME']}:{os.environ['GRADIO_SERVER_PORT']}")
 
 def main():
     """Main function that patches issues and launches TRELLIS"""
     
-    print("🚀 Starting TRELLIS with fixes applied...")
+    print("🚀 Starting TRELLIS with Gradio patch applied...")
     
     # Apply patches
     patch_gradio_issues()
     
-    # Add current directory to Python path
-    sys.path.insert(0, os.getcwd())
+    # Add source directory to Python path
+    source_dir = os.path.join(os.path.dirname(__file__), 'source')
+    sys.path.insert(0, source_dir)
     
     try:
-        # Import and launch TRELLIS
+        # Change to source directory and import app
+        os.chdir(source_dir)
         import app
         print("✅ TRELLIS app imported successfully")
         
-        if hasattr(app, 'demo'):
-            print("🎯 Launching TRELLIS Gradio interface...")
-            app.demo.launch(
-                server_name=os.environ['GRADIO_SERVER_NAME'],
-                server_port=int(os.environ['GRADIO_SERVER_PORT']),
-                share=False
-            )
-        else:
-            print("❌ No 'demo' object found in app module")
-            sys.exit(1)
-            
+        # Initialize the pipeline and launch the app
+        print("🎯 Initializing TRELLIS pipeline...")
+        from trellis.pipelines import TrellisImageTo3DPipeline
+        
+        pipeline = TrellisImageTo3DPipeline.from_pretrained("microsoft/TRELLIS-image-large")
+        pipeline.cuda()
+        
+        # Set the pipeline as a global variable in the app module
+        app.pipeline = pipeline
+        
+        print("🎯 Launching TRELLIS Gradio interface...")
+        app.demo.launch(
+            server_name=os.environ.get('GRADIO_SERVER_NAME', '0.0.0.0'),
+            server_port=int(os.environ.get('GRADIO_SERVER_PORT', '7860')),
+            share=os.environ.get('GRADIO_SHARE', 'false').lower() == 'true'
+        )
+        
     except Exception as e:
         print(f"❌ Error launching TRELLIS: {e}")
         traceback.print_exc()
