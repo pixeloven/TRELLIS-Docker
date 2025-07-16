@@ -135,8 +135,7 @@ docker buildx bake trellis           # All TRELLIS images
 
 ### Environment Variables
 - `GRADIO_SERVER_NAME`: "0.0.0.0" (bind to all interfaces)
-- `GRADIO_SERVER_PORT`: "7860" (web interface port)
-- `GRADIO_SHARE`: "False" (disable public sharing)
+- `GRADIO_SERVER_PORT`: 7860 (web interface port)
 - `ATTENTION_BACKEND`: "flash-attn" (optimized attention)
 
 ### Volume Mounts

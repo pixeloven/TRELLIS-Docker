@@ -34,6 +34,11 @@ WORKDIR /home/trellis/app
 # Copy TRELLIS source from submodule
 COPY --chown=trellis:trellis source/ .
 
+# Copy startup scripts
+COPY --chown=trellis:trellis ./startup.sh ./startup.sh
+COPY --chown=trellis:trellis ./post_install.sh ./post_install.sh
+COPY --chown=trellis:trellis ./entrypoint.sh ./entrypoint.sh
+
 # Install PyTorch ecosystem first (compatible versions)
 RUN --mount=type=cache,target=~/.cache/pip \
     source ~/.venv/bin/activate && \
@@ -89,8 +94,6 @@ RUN --mount=type=cache,target=~/.cache/pip \
     source ~/.venv/bin/activate && \
     pip install gradio==4.44.1 gradio_litmodel3d==0.0.1
 
-COPY --chown=trellis:trellis . .
-
 # Clean up pip cache
 RUN --mount=type=cache,target=~/.cache/pip \
     source ~/.venv/bin/activate && \
@@ -100,14 +103,11 @@ RUN --mount=type=cache,target=~/.cache/pip \
     chmod +x post_install.sh && \
     chmod +x entrypoint.sh
 
-ARG GRADIO_SERVER_PORT="7860"
-EXPOSE $GRADIO_SERVER_PORT
-
 ARG GRADIO_SERVER_NAME="0.0.0.0"
 ENV GRADIO_SERVER_NAME=$GRADIO_SERVER_NAME
 
-ARG GRADIO_SHARE="False"
-ENV GRADIO_SHARE=$GRADIO_SHARE
+ARG GRADIO_SERVER_PORT=7860
+EXPOSE $GRADIO_SERVER_PORT
 
 ENTRYPOINT ["./entrypoint.sh"]
 
