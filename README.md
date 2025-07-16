@@ -136,7 +136,10 @@ docker buildx bake trellis           # All TRELLIS images
 ### Environment Variables
 - `GRADIO_SERVER_NAME`: "0.0.0.0" (bind to all interfaces)
 - `GRADIO_SERVER_PORT`: 7860 (web interface port)
+- `GRADIO_SHARE`: "False" (disable public sharing)
 - `ATTENTION_BACKEND`: "flash-attn" (optimized attention)
+- `USE_DIRECT_APP`: "false" (use wrapper by default, "true" for direct app execution)
+- `TRELLIS_MODE`: "image" (default mode, "text" for text-to-3D mode)
 
 ### Volume Mounts
 The container mounts several directories for persistence:
@@ -159,6 +162,34 @@ The container mounts several directories for persistence:
 - **3D Model Viewer**: Integrated 3D model visualization
 - **Text-to-3D Generation**: Direct text input for 3D model creation
 - **Model Management**: Upload, download, and manage 3D models
+
+### Execution Modes
+The application supports two execution modes:
+
+#### Wrapper Mode (Default)
+- Uses `app_wrapper.py` with Gradio patch
+- Handles `LitModel3D` component compatibility issues
+- Recommended for production use
+- Set `USE_DIRECT_APP=false` (default)
+
+#### Direct Mode
+- Runs `app.py` or `app_text.py` directly
+- No Gradio patches applied
+- Useful for testing and debugging
+- May fail due to `LitModel3D` component issues
+- Set `USE_DIRECT_APP=true`
+
+#### Mode Selection
+```bash
+# Use wrapper mode (default)
+docker-compose up
+
+# Use direct mode for testing
+USE_DIRECT_APP=true docker-compose up
+
+# Use direct mode with text-to-3D
+USE_DIRECT_APP=true TRELLIS_MODE=text docker-compose up
+```
 
 ### Performance Optimizations
 - **Flash Attention**: Optimized transformer attention mechanisms
