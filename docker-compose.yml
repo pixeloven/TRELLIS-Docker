@@ -2,7 +2,7 @@ name: trellis
 
 services:
   trellis:
-    image: ghcr.io/pixeloven/trellis-docker/trellis-nvidia:latest
+    image: ghcr.io/pixeloven/trellis/trellis-nvidia:latest
     environment:
       # - PUID=${PUID:-1000}
       # - PGID=${PGID:-1000}

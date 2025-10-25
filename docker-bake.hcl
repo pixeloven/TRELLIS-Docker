@@ -3,7 +3,7 @@
 
 // Variables with defaults
 variable "REGISTRY_URL" {
-    default = "ghcr.io/pixeloven/trellis-docker/"
+    default = "ghcr.io/pixeloven/trellis/"
 }
 
 variable "IMAGE_LABEL" {

@@ -127,7 +127,7 @@ docker buildx bake trellis           # All TRELLIS images
 ```
 
 ### Build Arguments
-- `REGISTRY_URL`: Container registry (default: `ghcr.io/pixeloven/trellis-docker/`)
+- `REGISTRY_URL`: Container registry (default: `ghcr.io/pixeloven/trellis/`)
 - `IMAGE_LABEL`: Image tag (default: `latest`)
 - `PLATFORMS`: Target platforms (default: `linux/amd64`)
 
